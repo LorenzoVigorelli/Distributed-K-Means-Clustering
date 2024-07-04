@@ -3,6 +3,14 @@ import pandas as pd
 from time import time
 
 ###### FUNCTIONS #######
+def deleteBytes(datum):
+    x = datum[1]["x"]
+    mask = [type(i) != bytes for i in x]
+    datum[1]["x"] = np.asarray(x[mask])
+    print(x)
+    print(mask)
+    return datum
+    
 def localPlusPlusInit(points, k): 
     #print('pointsshape: ', points.shape)
     '''
@@ -113,7 +121,7 @@ def cost(Rdd):
     calculate global cost of X,C from an Rdd with distances from centroids already updated
     """
     my_cost=Rdd.map(lambda datum : datum[1]['d2'])\
-       .reduce(lambda a,b: a+b)
+               .reduce(lambda a,b: a+b)
     return my_cost 
 
 
@@ -127,17 +135,23 @@ def kMeans(Rdd, C_init, maxIterations, logParallelKmeans=None):
     my_kMeansCosts = []
     tIterations = []
     C=C_init
+
     for t in range(maxIterations):
         t1 = time()
-        Rdd = Rdd.map(lambda datum: selectCluster(datum, C))
+        RddCached = Rdd.map(lambda datum: selectCluster(datum, C)).persist()
         # Now we compute the new centroids by calculating the averages of points belonging to the same cluster.
         # Need to check that all centroids are assigned to at least one point, otherwise k changes!!! Solutions?!
-        C=updateCentroids(Rdd)
-        my_cost = cost(Rdd)
+        C=updateCentroids(RddCached)
+        my_cost = cost(RddCached)
+        
         my_kMeansCosts.append(my_cost)
         t2 = time()
+        
         tIteration = t2 - t1
         tIterations.append(tIteration)
+        
+        #RddCached.unpersist() bad for time efficiency, not necessary due to Python Garbage collector
+        
 
     tEnd = time()
     tTotal = tEnd - t0
@@ -180,7 +194,7 @@ def parallelInit(Rdd, k, l, logParallelInit=None):
     
     # associate each datum to the only centroid (computed before) and computed distances and cost
     Rdd=Rdd.map(lambda datum : (0, datum[1]))
-    Rdd=updateDistances(Rdd, C)
+    Rdd=updateDistances(Rdd, C).persist()
     my_cost=cost(Rdd)
 
     # number of iterations (log(cost))
@@ -205,7 +219,7 @@ def parallelInit(Rdd, k, l, logParallelInit=None):
         # stack C and C', update distances, centroids, and cost
         if (C_prime.shape[0]>0):
             C=np.vstack((C, C_prime))
-            Rdd=Rdd.map(lambda datum: selectCluster(datum, C))
+            Rdd=Rdd.map(lambda datum: selectCluster(datum, C)).persist()
             my_cost=cost(Rdd)
         t3=time()
 

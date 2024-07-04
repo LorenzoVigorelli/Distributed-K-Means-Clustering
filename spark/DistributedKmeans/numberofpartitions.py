@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import fetch_kddcup99
 from functions import *
 
+#### SELECT THE PICKLE FILE ####
+pickle_file = 'data/log1.pkl'
+
 #### SET UP SPARK ####
 
 # import the python libraries to create/connect to a Spark Session
@@ -35,24 +38,20 @@ data = fetch_kddcup99(return_X_y = True, percent10 = True) # default percent10=T
 x = data[0]
 y = data[1] 
 
-# cut the categorical features
-x = x[:, 4:]
-
 # cut the data fro memory reasons
 subLen = 1000
 x = x[:subLen,]
 y = y[:subLen]
 
-# setting the theoretical number of clusters
-kTrue = len(set(y))
-
 # setting up the output information
 totalLogParallelInit = {}
 totalLogParallelKmeans = {}
 tDurations = {}
+tPreOperations = {}
 
 # cycle over num_slices to be run
-nSlices = [2, 4, 8, 16, 32, 64]
+# nSlices = [2, 4, 8, 16, 32, 64]
+nSlices = [8]
 
 for nSlice in nSlices:
 
@@ -60,31 +59,42 @@ for nSlice in nSlices:
     print(f"The iteration with {nSlice} number of partition started at time {tInit}")
     
     # parallelize over nSlice partitions
-    Rdd = sc.parallelize([(None, {"x": x[i],"y": y[i], "d2":None}) for i in range(len(y)], numSlices = nSlice)
+    Rdd = sc.parallelize([(None, {"x": x[i],"y": y[i], "d2":None}) for i in range(len(y))], numSlices = nSlice)
 
-    # check if the parallelization over the partitions is ok
-    assert Rdd.getNumPartitions() = nSlice,
+    # cut the categorical attributes
+    Rdd = Rdd.map(deleteBytes)\
+             .persist()
 
+    # setting the theoretical number of clusters
+    kTrue = Rdd.map(lambda datum: datum[1]["y"])\
+               .distinct()\
+               .count()
+    
     # rescale the RDD over the max
     maxS = Rdd.map(lambda datum: datum[1]["x"])\
            .reduce(lambda a, b: np.maximum(a, b))
     minS = Rdd.map(lambda datum: datum[1]["x"])\
            .reduce(lambda a, b: np.minimum(a, b))
 
-    Rdd = Rdd.map(lambda datum: minmaxRescale(datum, minS, maxS))
-
+    Rdd = Rdd.map(lambda datum: minmaxRescale(datum, minS, maxS))\
+             .persist()
+    
     # setting up the input and output information for the alghoritm
     logParallelInit = {}
     logParallelKmeans = {}
 
-    
     k=kTrue
     l=k*2 # rescaling probability to have more centroids than k
 
+    tInitI = time()
+
+    tPreOperation = tInitI - tInit
+    print(f"Finished the pre-steps after {tPreOperation} seconds")
+          
     # initialization kMeans //
     C_init = parallelInit(Rdd, k, l, logParallelInit)
     
-    tInitialization = time() - tInit
+    tInitialization = time() - tInitI
     print(f"Finished the initialization after {tInitalization} seconds")
     
     # run the k-means alghoritm
@@ -99,19 +109,18 @@ for nSlice in nSlices:
     # output in the correct memory adresses
     totalLogParallelInit[nSlice] = logParallelInit
     totalLogParallelKmeans[nSlice] = logParallelKmeans
-    tDurations [nSlice] = tDuration
-
+    tDurations[nSlice] = tDuration
+    tPreOperations[nSlice] = tPreOperation
 
 #### TOTAL OUTPUT ON FILE ####
 
 # compute the total log 
-log = {"totalLogParallelInit": totalLogParallelInit, "totalLogParallelKmeans": totalLogParallelKmeans, "tDurations": tDurations}
+log = {"totalLogParallelInit": totalLogParallelInit, "totalLogParallelKmeans": totalLogParallelKmeans, "tDurations": tDurations, "tPreOperations": tPreOperations}
 
 # save the log file
 if not os.path.exists('data'): # create a directory if it doesnt exist
     os.makedirs('data')
 
-pickle_file = 'data/log.pkl'
 with open(pickle_file, "wb") as file:
     pickle.dump(log, file)
     
