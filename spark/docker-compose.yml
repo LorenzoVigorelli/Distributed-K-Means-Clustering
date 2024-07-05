@@ -24,6 +24,6 @@ services:
       - spark-master
     ports:
       - 4040:4040
-      - 1234:8888
+      - 8889:8888
     volumes:
       - $PWD:/mapd-workspace
