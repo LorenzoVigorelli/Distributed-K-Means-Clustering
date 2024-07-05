@@ -3,6 +3,14 @@ import pandas as pd
 from time import time
 
 ###### FUNCTIONS #######
+def labelToInt(label):
+    """
+    Let's define a map from Y (set of strings) into (0,size(Y)) for easier usage
+    """
+    uniqueLabels=list(np.unique(y))
+    return uniqueLabels.index(label)
+
+
 def deleteBytes(datum):
     x = datum[1]["x"]
     mask = [type(i) != bytes for i in x]
@@ -164,13 +172,21 @@ def kMeans(Rdd, C_init, maxIterations, logParallelKmeans=None):
     return C
 
 
-def naiveInitFromSet(Rdd, k):
+def naiveInitFromSet(Rdd, k, logNaiveInit=None):
     """
     uniform sampling of k points from Rdd
     """
+    t0 = time()
+    
     kSubset=Rdd.takeSample(False, k)
     # Replacement is set to False to avoid coinciding centroids BUT no guarantees that in the original dataset all points are distinct!!! Check if causes problems in the algorithm (i.e. need to pre-filter) or it's ok
     C_init=np.array([datum[1]['x'] for datum in kSubset])
+
+    tEnd = time()
+    
+    if logNaiveInit is not None:
+        logNaiveInit["tTotal"] = tEnd - t0
+        
     return C_init
 
 
@@ -255,4 +271,11 @@ def parallelInit(Rdd, k, l, logParallelInit=None):
         
     return C_init
 
+def predictedCentroidsLabeler(C_expected, C_predicted):
+    distMatrix=np.sum((C_expected[:,:,np.newaxis]-C_predicted.T[np.newaxis, :,:])**2,axis=1)
+    #the labeler i-th entry j, tells that i-th centroid of C_expected is associated to j-th element of C_predicted
+    labeler=np.argmin(distMatrix,axis=1)
+    #square distance of element of C_expected to nearest point in C_predicted
+    distances=distMatrix[np.arange(len(distMatrix)),labeler]
+    return labeler, distances
 
