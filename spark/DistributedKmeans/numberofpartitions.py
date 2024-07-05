@@ -30,6 +30,7 @@ spark = SparkSession.builder \
 
 # create a spark context
 sc = spark.sparkContext
+sc.setLogLevel("ERROR")
 
 #### IMPORT THE DATA SET ####
 
