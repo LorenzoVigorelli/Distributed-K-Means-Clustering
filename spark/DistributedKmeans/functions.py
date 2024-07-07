@@ -27,7 +27,7 @@ def localPlusPlusInit(points, k):
     '''
     C=points[np.random.choice(points.shape[0])]#sample from array di punti ecc...
     C=C[np.newaxis, :]
-    for _ in range(k):
+    for _ in range(k-1):
         #points is array (n, dim), C is array(g<=k, dim)
         #probs is array (n,1)
         probs=np.min(np.sum((points[:,:,np.newaxis]-C.T[np.newaxis,:,:])**2, axis=1), axis=1).flatten()
@@ -276,6 +276,14 @@ def predictedCentroidsLabeler(C_expected, C_predicted):
     #the labeler i-th entry j, tells that i-th centroid of C_expected is associated to j-th element of C_predicted
     labeler=np.argmin(distMatrix,axis=1)
     #square distance of element of C_expected to nearest point in C_predicted
-    distances=distMatrix[np.arange(len(distMatrix)),labeler]
+    distances=np.sqrt(np.array(distMatrix[np.arange(len(distMatrix)),labeler]).astype(float))
     return labeler, distances
 
+def nearestCentroidDistances(C):
+    distMatrix=np.sum((C[:,:,np.newaxis]-C.T[np.newaxis, :,:])**2,axis=1)
+    distMatrix+=np.diag(np.repeat(np.inf, distMatrix.shape[0]))
+    #the labeler i-th entry j, tells that i-th centroid of C_expected is associated to j-th element of C_predicted
+    labeler=np.argmin(distMatrix,axis=1)
+    #square distance of element of C_expected to nearest point in C_predicted
+    distances=np.sqrt(np.array(distMatrix[np.arange(distMatrix.shape[0]),labeler]).astype(float))
+    return labeler, distances
