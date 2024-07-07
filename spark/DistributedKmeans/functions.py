@@ -219,7 +219,7 @@ def kMeans(Rdd, C_init, maxIterations, logParallelKmeans=None):
     return C
 
 
-def naiveInitFromSet(Rdd, k, spark_seed ,logNaiveInit=None):
+def naiveInitFromSet(Rdd, k, spark_seed=12345,logNaiveInit=None):
     """
     Uniform sampling of k points from Rdd
     """
