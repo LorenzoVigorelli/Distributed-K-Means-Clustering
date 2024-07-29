@@ -13,7 +13,7 @@ This project aims to adapt the well-known **K-Means** clustering algorithm to **
 Main reference: *Bahmani, Bahman, et al. "Scalable k-means++." arXiv preprint arXiv:1203.6402 (2012)*.
 
 ### About this repo
-The main results are organized in the `ParallelintializationRdd` notebook, including a brief exploration of the dataset and the time efficiency analysis. <br>
+The main results are organized in the `ParallelInitializationRdd` notebook, including a brief exploration of the dataset and the time efficiency analysis. <br>
 The `BenchmarkComputation` folder contains the code to run the analysis. The code is divided into three files, depending on whether you want to persist, persist and unpersist, or not persist at all the RDDs during the computation. <br>
 The functions are divided into three files in the `internalLibrary`. To access them directly, you can also use the `instaFunctions.py` file. <br>
 `Data` contains the logs of each run, defined as a nested structure of dictionaries. 
